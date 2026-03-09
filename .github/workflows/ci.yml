@@ -6,9 +6,6 @@ on:
   pull_request:
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Lint + type check (fast, runs once)
-  # ---------------------------------------------------------------------------
   lint:
     name: Lint & type check
     runs-on: ubuntu-latest
@@ -20,7 +17,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install lint tools
-        run: pip install ruff mypy pydantic>=2.0
+        run: pip install "ruff>=0.4" "mypy>=1.10" "pydantic>=2.0"
 
       - name: ruff check
         run: ruff check .
@@ -31,32 +28,15 @@ jobs:
       - name: mypy
         run: mypy metaflow_contracts
 
-  # ---------------------------------------------------------------------------
-  # Test matrix — Python versions x optional-dependency combinations
-  # ---------------------------------------------------------------------------
   test:
-    name: "test / py${{ matrix.python-version }} / ${{ matrix.label }}"
+    name: "test / py${{ matrix.python-version }} / ${{ matrix.extras }}"
     runs-on: ubuntu-latest
     needs: lint
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-        include:
-          # Baseline: no optional deps
-          - label: "no-extras"
-            install_extras: "dev"
-          # With pydantic only
-          - label: "pydantic"
-            install_extras: "dev,pydantic"
-          # With beartype only
-          - label: "beartype"
-            install_extras: "dev,beartype"
-          # Full: all optional deps
-          - label: "all"
-            install_extras: "dev,pydantic,beartype"
-        # Cross each Python version with each extras combination
-        python-version: ["3.10", "3.11", "3.12"]
+        extras: ["dev", "dev,pydantic", "dev,beartype", "dev,pydantic,beartype"]
 
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +47,7 @@ jobs:
           cache: pip
 
       - name: Install package
-        run: pip install -e ".[${{ matrix.install_extras }}]"
+        run: pip install -e ".[${{ matrix.extras }}]"
 
       - name: Run tests with coverage
         run: |
@@ -79,7 +59,7 @@ jobs:
             -v
 
       - name: Upload coverage
-        if: matrix.python-version == '3.12' && matrix.label == 'all'
+        if: matrix.python-version == '3.12' && matrix.extras == 'dev,pydantic,beartype'
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
