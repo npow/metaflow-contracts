@@ -40,7 +40,11 @@ class MyFlow(FlowSpec):
         print(self.label, self.confidence)
 ```
 
-If `scores` is the wrong type when `start` finishes, the run fails immediately at that step — not somewhere downstream.
+If `scores` is the wrong type when `start` finishes, the run fails immediately at that step — not somewhere downstream:
+
+```
+ContractViolationError in step 'start' [output]: 'scores' expected list, got str
+```
 
 ## Install
 
@@ -71,6 +75,11 @@ def classify(self):
     self.label = model.predict(self.scores)
     self.confidence = model.score(self.scores)
     self.next(self.end)
+```
+
+```
+# Wrong type:   ContractViolationError in step 'classify' [output]: 'confidence' expected float, got str
+# Missing field: ContractViolationError in step 'classify' [output]: 'label' is missing (expected str)
 ```
 
 ### Pydantic models
