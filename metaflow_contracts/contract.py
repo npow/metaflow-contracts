@@ -78,7 +78,7 @@ def contract(
 
 def _validate(flow_self: Any, spec: Spec, phase: str, step_name: str) -> None:
     if is_pydantic_model(spec):
-        validate_pydantic(flow_self, spec, phase=phase, step_name=step_name)  # type: ignore[arg-type]
+        validate_pydantic(flow_self, spec, phase=phase, step_name=step_name)
     else:
         validate_plain(flow_self, spec, phase=phase, step_name=step_name)  # type: ignore[arg-type]
 

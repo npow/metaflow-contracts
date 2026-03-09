@@ -18,7 +18,7 @@ def is_pydantic_model(obj: Any) -> bool:
 
 def validate_pydantic(
     flow_self: Any,
-    model_cls: type,
+    model_cls: Any,
     phase: str,
     step_name: str,
 ) -> None:

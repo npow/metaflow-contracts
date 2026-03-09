@@ -20,7 +20,7 @@ def _type_name(t: Any) -> str:
 
 def _check(value: Any, expected_type: Any) -> bool:
     if _beartype_available:
-        return is_bearable(value, expected_type)
+        return bool(is_bearable(value, expected_type))
     return isinstance(value, expected_type)
 
 
