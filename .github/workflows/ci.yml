@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint + type check (fast, runs once)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lint tools
+        run: pip install ruff mypy pydantic>=2.0
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy metaflow_contracts
+
+  # ---------------------------------------------------------------------------
+  # Test matrix — Python versions x optional-dependency combinations
+  # ---------------------------------------------------------------------------
+  test:
+    name: "test / py${{ matrix.python-version }} / ${{ matrix.label }}"
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          # Baseline: no optional deps
+          - label: "no-extras"
+            install_extras: "dev"
+          # With pydantic only
+          - label: "pydantic"
+            install_extras: "dev,pydantic"
+          # With beartype only
+          - label: "beartype"
+            install_extras: "dev,beartype"
+          # Full: all optional deps
+          - label: "all"
+            install_extras: "dev,pydantic,beartype"
+        # Cross each Python version with each extras combination
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package
+        run: pip install -e ".[${{ matrix.install_extras }}]"
+
+      - name: Run tests with coverage
+        run: |
+          pytest \
+            --cov=metaflow_contracts \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=90 \
+            -v
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12' && matrix.label == 'all'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
