@@ -32,8 +32,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git tag "v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
-          gh release create "v${{ github.event.inputs.version }}" \
-            --title "v${{ github.event.inputs.version }}" \
-            --generate-notes
+          TAG="v${{ github.event.inputs.version }}"
+          # Idempotent tag push: if the tag already exists on the remote, skip
+          # creation rather than failing. The 2026-03-21 run failed here when
+          # someone re-triggered the workflow for an already-released version
+          # ("Updates were rejected because the tag already exists in the remote").
+          if git ls-remote --tags --exit-code origin "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Tag $TAG already exists on origin; skipping tag creation."
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+          # Same for the GitHub Release: only create if not already present.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists; skipping release creation."
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --generate-notes
+          fi
